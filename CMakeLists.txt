@@ -13,19 +13,38 @@ project(serde LANGUAGES CXX)
 
 string(APPEND CMAKE_CXX_FLAGS " -freflection")
 
-file(GLOB_RECURSE ALL_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp")
+file(GLOB_RECURSE SERDE_MODULE_INTERFACES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.cppm"
+)
 
-file(GLOB_RECURSE ALL_MODULE_INTERFACES CONFIGURE_DEPENDS 
-    "${CMAKE_CURRENT_SOURCE_DIR}/**/*.cppm"
+add_library(serde)
+add_library(serde::serde ALIAS serde)
+
+target_sources(serde
+    PUBLIC FILE_SET CXX_MODULES
+        BASE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/src"
+        FILES ${SERDE_MODULE_INTERFACES}
+)
+
+target_compile_options(serde PUBLIC -freflection)
+target_compile_options(serde PRIVATE -Wall -Wextra)
+
+add_library(nlohmann_json)
+
+target_sources(nlohmann_json
+    PUBLIC FILE_SET CXX_MODULES
+        BASE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/test"
+        FILES "${CMAKE_CURRENT_SOURCE_DIR}/test/json.cppm"
+)
+
+file(GLOB_RECURSE SERDE_TEST_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp"
 )
 
 add_executable(serde-test)
 
-target_sources(serde-test
-    PRIVATE
-        ${ALL_SOURCES}
-    PUBLIC FILE_SET cxx_modules TYPE CXX_MODULES FILES
-        ${ALL_MODULE_INTERFACES}
-)
+target_sources(serde-test PRIVATE ${SERDE_TEST_SOURCES})
+
+target_link_libraries(serde-test PRIVATE serde::serde nlohmann_json)
 
 target_compile_options(serde-test PRIVATE -Wall -Wextra)
