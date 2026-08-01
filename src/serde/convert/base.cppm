@@ -1,5 +1,7 @@
 export module serde:convert.base;
 
+import std;
+
 import :serialize;
 import :deserialize;
 
@@ -12,7 +14,7 @@ public:
 
 template <serde::serialize::Serializer S, typename T>
 void serialize(S &serializer, const T &value) {
-  serialize_type<S, T>{}(serializer, value);
+  serialize_type<S, std::remove_cvref_t<T>>{}(serializer, value);
 }
 
 template <serde::serialize::Serializer S, typename T>
@@ -32,6 +34,6 @@ public:
 
 template <serde::deserialize::Deserializer D, typename T>
 void deserialize(D &deserializer, T &value) {
-  deserialize_type<D, T>{}(deserializer, value);
+  deserialize_type<D, std::remove_cvref_t<T>>{}(deserializer, value);
 }
 } // namespace serde::convert
