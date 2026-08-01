@@ -14,7 +14,7 @@ export struct Annotation {
 export constexpr Annotation skip() { return {.type = Annotation::Skip}; }
 
 export constexpr Annotation skip_serialize() {
-	return {.type = Annotation::SkipSerialize};
+  return {.type = Annotation::SkipSerialize};
 }
 
 export constexpr Annotation skip_deserialize() {
@@ -22,7 +22,8 @@ export constexpr Annotation skip_deserialize() {
 }
 
 export consteval Annotation rename(std::string_view name) {
-  return {.type = Annotation::Rename, .string_value = std::define_static_string(name)};
+  return {.type = Annotation::Rename,
+          .string_value = std::define_static_string(name)};
 }
 
 struct Flags {

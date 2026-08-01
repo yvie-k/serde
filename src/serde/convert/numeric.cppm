@@ -1,5 +1,7 @@
 export module serde:convert.numeric;
 
+import std;
+
 import :serialize;
 import :deserialize;
 
@@ -70,16 +72,17 @@ public:
 
 template <serde::deserialize::Deserializer D> class deserialize_type<D, float> {
 public:
-  void operator()(D &deserializer, const float &value) {
+  void operator()(D &deserializer, float &value) {
     if (auto float_value = deserializer.deserialize_float()) {
       value = *float_value;
     }
   }
 };
 
-template <serde::deserialize::Deserializer D> class serialize_type<D, double> {
+template <serde::deserialize::Deserializer D>
+class deserialize_type<D, double> {
 public:
-  void operator()(D &deserializer, const double &value) {
+  void operator()(D &deserializer, double &value) {
     if (auto float_value = deserializer.deserialize_float()) {
       value = *float_value;
     }

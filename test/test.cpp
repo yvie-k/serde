@@ -30,7 +30,12 @@ class JsonSerializer {
 public:
   JsonSerializer(nlohmann::json &json) : value(json) {}
 
-  JsonSerializer serialize_map(std::string_view field) {
+  JsonSerializer serialize_map() {
+    value = nlohmann::json::object();
+    return JsonSerializer{value};
+  }
+
+  JsonSerializer add_field(std::string_view field) {
     return JsonSerializer{value[field]};
   }
 
@@ -69,7 +74,7 @@ public:
     return std::nullopt;
   }
 
-  std::optional<JsonDeserializer> deserialize_map(std::string_view field) {
+  std::optional<JsonDeserializer> read_field(std::string_view field) {
     if (value.is_object() && value.contains(field)) {
       return JsonDeserializer{value[field]};
     }
@@ -93,9 +98,9 @@ public:
     return std::nullopt;
   }
 
-  std::optional<std::string> deserialize_string() {
+  std::optional<std::string_view> deserialize_string() {
     if (value.is_string()) {
-      return value;
+      return value.get<std::string_view>();
     }
 
     return std::nullopt;

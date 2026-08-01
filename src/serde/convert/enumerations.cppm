@@ -1,5 +1,7 @@
 export module serde:convert.enumerations;
 
+import std;
+
 import :serialize;
 import :deserialize;
 
@@ -28,7 +30,8 @@ template <serde::deserialize::Deserializer D, typename T>
 class deserialize_type<D, T> {
 public:
   void operator()(D &deserializer, T &value) {
-    std::optional<std::string> string_value = deserializer.deserialize_string();
+    std::optional<std::string_view> string_value =
+        deserializer.deserialize_string();
     if (!string_value) {
       return;
     }

@@ -1,17 +1,21 @@
 export module serde:convert.classes;
 
+import std;
+
 import :serialize;
 import :deserialize;
 import :convert.base;
 import :annotations;
 
-export namespace serde::convert {
+namespace serde::convert {
 
 template <serde::serialize::Serializer S, typename T,
           std::enable_if_t<std::is_class_v<T>, bool> = true>
 class serialize_class {
 public:
   void operator()(S &serializer, const T &value) {
+    auto map_serializer = serializer.serialize_map();
+
     static constexpr auto context = std::meta::access_context::unchecked();
     static constexpr auto members = std::define_static_array(
         std::meta::nonstatic_data_members_of(^^T, context));
@@ -20,8 +24,8 @@ public:
           serde::annotations::compute_serialize_flags(property);
 
       if constexpr (!flags.skip) {
-        auto map_serializer = serializer.serialize_map(flags.name);
-        serialize(map_serializer, value.[:property:]);
+        auto field_serializer = map_serializer.add_field(flags.name);
+        serialize(field_serializer, value.[:property:]);
       }
     }
   }
@@ -39,7 +43,7 @@ public:
 /* Specializations for special classes */
 
 template <serde::serialize::Serializer S, typename T>
-class serialize_class<S, const std::unique_ptr<T>> {
+class serialize_class<S, std::unique_ptr<T>> {
 public:
   void operator()(S &serializer, const std::unique_ptr<T> &value) {
     serialize(serializer, *value);
@@ -47,7 +51,7 @@ public:
 };
 
 template <serde::serialize::Serializer S, typename T>
-class serialize_class<S, const std::shared_ptr<T>> {
+class serialize_class<S, std::shared_ptr<T>> {
 public:
   void operator()(S &serializer, const std::shared_ptr<T> &value) {
     serialize(serializer, *value);
@@ -80,9 +84,11 @@ template <serde::serialize::Serializer S,
 class serialize_class<S, std::map<K, V>> {
 public:
   void operator()(S &serializer, const std::map<K, V> &map) {
+    auto map_serializer = serializer.serialize_map();
+
     for (const auto &[key, value] : map) {
-      auto map_serializer = serializer.serialize_map(std::string_view(key));
-      serialize(map_serializer, value);
+      auto field_serializer = map_serializer.add_field(std::string_view(key));
+      serialize(field_serializer, value);
     }
   }
 };
@@ -92,9 +98,11 @@ template <serde::serialize::Serializer S,
 class serialize_class<S, std::unordered_map<K, V>> {
 public:
   void operator()(S &serializer, const std::unordered_map<K, V> &map) {
+    auto map_serializer = serializer.serialize_map();
+
     for (const auto &[key, value] : map) {
-      auto map_serializer = serializer.serialize_map(std::string_view(key));
-      serialize(map_serializer, value);
+      auto field_serializer = map_serializer.add_field(std::string_view(key));
+      serialize(field_serializer, value);
     }
   }
 };
@@ -112,7 +120,7 @@ public:
           serde::annotations::compute_deserialize_flags(property);
 
       if constexpr (!flags.skip) {
-        auto map_deserializer = deserializer.deserialize_map(flags.name);
+        auto map_deserializer = deserializer.read_field(flags.name);
         if (map_deserializer) {
           deserialize(*map_deserializer, value.[:property:]);
         }
@@ -134,15 +142,15 @@ template <serde::deserialize::Deserializer D, typename T>
 class deserialize_class<D, std::unique_ptr<T>> {
 public:
   void operator()(D &deserializer, std::unique_ptr<T> &value) {
-    value = std::make_unique(T{});
+    value = std::make_unique<T>();
     deserialize(deserializer, *value);
   }
 };
 template <serde::deserialize::Deserializer D, typename T>
-class deserialize_type<D, std::shared_ptr<T>> {
+class deserialize_class<D, std::shared_ptr<T>> {
 public:
   void operator()(D &deserializer, std::shared_ptr<T> &value) {
-    value = std::make_shared(T{});
+    value = std::make_shared<T>();
     deserialize(deserializer, *value);
   }
 };
@@ -175,12 +183,11 @@ public:
 template <serde::deserialize::Deserializer D, typename V>
 class deserialize_class<D, std::map<std::string, V>> {
 public:
-  void operator()(D &deserializer,
-                  std::map<std::string, V> &value) {
+  void operator()(D &deserializer, std::map<std::string, V> &value) {
     if (auto map_keys = deserializer.keys()) {
       for (const auto &key : *map_keys) {
         if (auto map_deserializer =
-                deserializer.deserialize_map(std::string_view(key))) {
+                deserializer.read_field(std::string_view(key))) {
           deserialize(*map_deserializer, value[key]);
         }
       }
@@ -191,12 +198,11 @@ public:
 template <serde::deserialize::Deserializer D, typename V>
 class deserialize_class<D, std::unordered_map<std::string, V>> {
 public:
-  void operator()(D &deserializer,
-                  std::unordered_map<std::string, V> &value) {
+  void operator()(D &deserializer, std::unordered_map<std::string, V> &value) {
     if (auto map_keys = deserializer.keys()) {
       for (const auto &key : *map_keys) {
         if (auto map_deserializer =
-                deserializer.deserialize_map(std::string_view(key))) {
+                deserializer.read_field(std::string_view(key))) {
           deserialize(*map_deserializer, value[key]);
         }
       }
