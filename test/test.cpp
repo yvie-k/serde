@@ -161,5 +161,5 @@ int main() {
     std::cout << (first ? "" : ", ") << k << " : " << v;
     first = false;
   }
-  std::cout << "}";
+  std::cout << "}" << std::endl;
 }
