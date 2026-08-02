@@ -9,11 +9,12 @@ import :convert.base;
 
 namespace serde::convert {
 
-template <serde::serialize::Serializer S, typename T>
+template <typename T>
   requires(std::is_enum_v<T>)
-class serialize_type<S, T> {
+class type<T> {
 public:
-  void operator()(S &serializer, const T &value) {
+  template <serde::serialize::Serializer S>
+  static void serialize(S &serializer, const T &value) {
     static constexpr auto enumerators =
         std::define_static_array(std::meta::enumerators_of(^^T));
     template for (constexpr auto e : enumerators) {
@@ -23,13 +24,9 @@ public:
       }
     }
   }
-};
 
-template <serde::deserialize::Deserializer D, typename T>
-  requires(std::is_enum_v<T>)
-class deserialize_type<D, T> {
-public:
-  void operator()(D &deserializer, T &value) {
+  template <serde::deserialize::Deserializer D>
+  static void deserialize(D &deserializer, T &value) {
     std::optional<std::string_view> string_value =
         deserializer.deserialize_string();
     if (!string_value) {
