@@ -1,30 +1,12 @@
+export module serde.test.json;
+
 import std;
 
 import nlohmann.json;
 
 import serde;
 
-enum Color {
-  Red,
-  Green,
-  Blue,
-  White,
-};
-
-struct Y {
-  int value = 0;
-
-  [[= serde::annotations::rename("colour")]] Color color = Color::White;
-
-  [[= serde::annotations::skip()]] union {
-  } _skip2;
-};
-
-struct X {
-  std::string s;
-  std::vector<Y> y;
-  std::map<std::string, std::string> kv;
-};
+export namespace serde::test {
 
 class JsonSerializer {
 public:
@@ -54,6 +36,8 @@ public:
 
   void serialize_float(double number) { value = number; }
 
+  void serialize_bool(bool boolean) { value = boolean; }
+
 private:
   nlohmann::json &value;
 };
@@ -64,7 +48,7 @@ public:
 
   std::optional<std::vector<std::string>> keys() {
     if (value.is_object()) {
-      std::vector<std ::string> result;
+      std::vector<std::string> result;
       for (const auto &entry : value.items()) {
         result.push_back(entry.key());
       }
@@ -117,6 +101,8 @@ public:
   std::optional<std::uint64_t> deserialize_unsigned() {
     if (value.is_number_unsigned()) {
       return value;
+    } else if (value.is_number_integer() && value.get<std::int64_t>() >= 0) {
+      return value.get<std::int64_t>();
     }
 
     return std::nullopt;
@@ -130,41 +116,46 @@ public:
     return std::nullopt;
   }
 
+  std::optional<bool> deserialize_bool() {
+    if (value.is_boolean()) {
+      return value;
+    }
+
+    return std::nullopt;
+  }
+
 private:
   const nlohmann::json &value;
 
   std::size_t array_index = 0;
 };
 
-int main() {
+static_assert(serde::serialize::Serializer<JsonSerializer>);
+static_assert(serde::deserialize::Deserializer<JsonDeserializer>);
+
+/* Convenience helpers for the test cases. */
+
+template <typename T> nlohmann::json to_json(const T &value) {
   nlohmann::json output;
-  JsonSerializer s(output);
-
-  X input;
-  input.s = "foo";
-  input.y = {{.value = 42, .color = Color::Red},
-             {.value = 43, .color = Color::Blue}};
-  input.kv["foo"] = "bar";
-  input.kv["baz"] = "qux";
-  serde::convert::serialize(s, input);
-
-  std::cout << output.dump(true) << std::endl;
-
-  JsonDeserializer d(output);
-  X converted;
-  serde::convert::deserialize(d, converted);
-
-  std::cout << "s = " << converted.s << ", y = {";
-  bool first = true;
-  for (const auto &entry : converted.y) {
-    std::cout << (first ? "" : ", ") << entry.value << " / " << entry.color;
-    first = false;
-  }
-  std::cout << "}, kv = {";
-  first = true;
-  for (const auto &[k, v] : converted.kv) {
-    std::cout << (first ? "" : ", ") << k << " : " << v;
-    first = false;
-  }
-  std::cout << "}" << std::endl;
+  JsonSerializer serializer(output);
+  serde::convert::serialize(serializer, value);
+  return output;
 }
+
+template <typename T> void from_json(const nlohmann::json &json, T &value) {
+  JsonDeserializer deserializer(json);
+  serde::convert::deserialize(deserializer, value);
+}
+
+template <typename T> T from_json(const nlohmann::json &json) {
+  T value{};
+  from_json(json, value);
+  return value;
+}
+
+/* Serialize a value and read it straight back into a fresh instance. */
+template <typename T> T round_trip(const T &value) {
+  return from_json<T>(to_json(value));
+}
+
+} // namespace serde::test

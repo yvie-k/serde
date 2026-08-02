@@ -37,6 +37,12 @@ target_sources(nlohmann_json
         FILES "${CMAKE_CURRENT_SOURCE_DIR}/test/json.cppm"
 )
 
+add_library(doctest INTERFACE)
+
+target_include_directories(doctest INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}/test")
+
+enable_testing()
+
 file(GLOB_RECURSE SERDE_TEST_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cpp"
 )
@@ -45,6 +51,14 @@ add_executable(serde-test)
 
 target_sources(serde-test PRIVATE ${SERDE_TEST_SOURCES})
 
-target_link_libraries(serde-test PRIVATE serde::serde nlohmann_json)
+target_sources(serde-test
+    PRIVATE FILE_SET CXX_MODULES
+        BASE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/test"
+        FILES "${CMAKE_CURRENT_SOURCE_DIR}/test/json_serde.cppm"
+)
+
+target_link_libraries(serde-test PRIVATE serde::serde nlohmann_json doctest)
 
 target_compile_options(serde-test PRIVATE -Wall -Wextra)
+
+add_test(NAME serde COMMAND serde-test)

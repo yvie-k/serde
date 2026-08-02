@@ -17,7 +17,7 @@ concept string_deserialize = std::same_as<std::string, T>;
 
 template <typename T>
 concept string_serialize_or_deserialize =
-  string_serialize<T> || string_deserialize<T>;
+    string_serialize<T> || string_deserialize<T>;
 
 template <typename T, std::enable_if_t<std::is_class_v<T>, bool> = true>
 class structure {
@@ -142,6 +142,8 @@ public:
     if (!array_deserializer) {
       return;
     }
+
+    array.clear();
 
     while (auto array_entry_deserializer = array_deserializer->next_entry()) {
       serde::convert::deserialize(*array_entry_deserializer,

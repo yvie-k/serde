@@ -19,5 +19,6 @@ concept Deserializer = requires(T &s, std::string_view string) {
     s.deserialize_unsigned()
   } -> std::convertible_to<std::optional<std::uint64_t>>;
   { s.deserialize_float() } -> std::convertible_to<std::optional<double>>;
+  { s.deserialize_bool() } -> std::convertible_to<std::optional<bool>>;
 };
 } // namespace serde::deserialize
