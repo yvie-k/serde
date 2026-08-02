@@ -9,6 +9,16 @@ import :annotations;
 
 namespace serde::convert {
 
+template <typename T>
+concept string_serialize = std::convertible_to<T, std::string_view>;
+
+template <typename T>
+concept string_deserialize = std::same_as<std::string, T>;
+
+template <typename T>
+concept string_serialize_or_deserialize =
+  string_serialize<T> || string_deserialize<T>;
+
 template <typename T, std::enable_if_t<std::is_class_v<T>, bool> = true>
 class structure {
 public:
@@ -94,15 +104,16 @@ public:
   }
 };
 
-template <std::convertible_to<std::string_view> T> class structure<T> {
+template <string_serialize_or_deserialize T> class structure<T> {
 public:
   template <serde::serialize::Serializer S>
+    requires string_serialize<T>
   static void serialize(S &serializer, const T &value) {
     serializer.serialize_string(std::string_view(value));
   }
 
   template <serde::deserialize::Deserializer D>
-    requires std::same_as<T, std::string>
+    requires string_deserialize<T>
   static void deserialize(D &deserializer, T &value) {
     if (auto deserialized = deserializer.deserialize_string()) {
       value = *deserialized;
@@ -139,10 +150,11 @@ public:
   }
 };
 
-template <std::convertible_to<std::string_view> K, typename V>
+template <string_serialize_or_deserialize K, typename V>
 class structure<std::map<K, V>> {
 public:
   template <serde::serialize::Serializer S>
+    requires string_serialize<K>
   static void serialize(S &serializer, const std::map<K, V> &map) {
     auto map_serializer = serializer.serialize_map();
 
@@ -153,8 +165,8 @@ public:
   }
 
   template <serde::deserialize::Deserializer D>
-    requires(std::same_as<K, std::string>)
-  static void deserialize(D &deserializer, std::map<std::string, V> &value) {
+    requires string_deserialize<K>
+  static void deserialize(D &deserializer, std::map<K, V> &value) {
     if (auto map_keys = deserializer.keys()) {
       for (const auto &key : *map_keys) {
         if (auto map_deserializer =
@@ -170,10 +182,11 @@ public:
       delete ("Cannot deserialize std::string_view");
 };
 
-template <std::convertible_to<std ::string_view> K, typename V>
+template <string_serialize_or_deserialize K, typename V>
 class structure<std::unordered_map<K, V>> {
 public:
   template <serde::serialize::Serializer S>
+    requires string_serialize<K>
   static void serialize(S &serializer, const std::unordered_map<K, V> &map) {
     auto map_serializer = serializer.serialize_map();
 
@@ -184,7 +197,7 @@ public:
   }
 
   template <serde::deserialize::Deserializer D>
-    requires(std::same_as<K, std::string>)
+    requires string_deserialize<K>
   static void deserialize(D &deserializer,
                           std::unordered_map<std::string, V> &value) {
     if (auto map_keys = deserializer.keys()) {
